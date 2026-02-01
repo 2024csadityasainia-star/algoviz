@@ -1,0 +1,1728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlgoViz — Algorithm Visualizer</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a25;
+    --border: #2a2a3a;
+    --accent: #00f5c4;
+    --accent2: #7c3aed;
+    --accent3: #f59e0b;
+    --accent4: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --bar-default: #1e3a5f;
+    --bar-active: #00f5c4;
+    --bar-compare: #f59e0b;
+    --bar-sorted: #10b981;
+    --bar-pivot: #ef4444;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,245,196,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,245,196,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 42px;
+    height: 42px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+
+  .logo-text {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .logo-text span { color: var(--accent); }
+
+  .header-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+  }
+
+  /* Layout */
+  .main-layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    position: sticky;
+    top: 24px;
+  }
+
+  .sidebar-section {
+    margin-bottom: 24px;
+  }
+
+  .sidebar-section:last-child { margin-bottom: 0; }
+
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Algorithm tabs */
+  .algo-type-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .type-tab {
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    letter-spacing: 0.5px;
+  }
+
+  .type-tab.active {
+    background: var(--surface2);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .algo-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .algo-btn {
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .algo-btn:hover {
+    background: var(--surface2);
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: translateX(3px);
+  }
+
+  .algo-btn.active {
+    background: linear-gradient(135deg, rgba(0,245,196,0.1), rgba(124,58,237,0.1));
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .algo-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+
+  .algo-btn.active .algo-dot, .algo-btn:hover .algo-dot {
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  /* Complexity badge */
+  .complexity-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+
+  .complexity-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .complexity-row:last-child { margin-bottom: 0; }
+
+  .complexity-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .complexity-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent3);
+    background: rgba(245,158,11,0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  /* Controls */
+  .control-group {
+    margin-bottom: 14px;
+  }
+
+  .control-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .control-label span {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 8px var(--accent);
+    transition: transform 0.2s;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+  /* Action buttons */
+  .btn-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .btn {
+    padding: 10px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  .btn-primary:hover {
+    background: #00d4a8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(0,245,196,0.3);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn-full {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, var(--accent2), #9333ea);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+
+  .btn-full:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+  }
+
+  /* Main canvas area */
+  .canvas-area {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .canvas-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .algo-title {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .algo-title span { color: var(--accent); }
+
+  .status-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .status-badge.idle {
+    background: rgba(100,116,139,0.1);
+    border: 1px solid rgba(100,116,139,0.3);
+    color: var(--muted);
+  }
+
+  .status-badge.running {
+    background: rgba(0,245,196,0.1);
+    border: 1px solid rgba(0,245,196,0.3);
+    color: var(--accent);
+  }
+
+  .status-badge.done {
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.3);
+    color: #10b981;
+  }
+
+  .pulse {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pulse 1s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  /* Visualization panels */
+  .viz-panel {
+    padding: 20px;
+    min-height: 380px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    position: relative;
+  }
+
+  /* Sorting viz */
+  #sort-viz {
+    width: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 3px;
+    height: 300px;
+  }
+
+  .bar {
+    flex: 1;
+    max-width: 40px;
+    min-width: 4px;
+    border-radius: 4px 4px 0 0;
+    transition: height 0.15s ease;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .bar.default { background: linear-gradient(to top, #1e3a5f, #2d5a8e); }
+  .bar.comparing { background: linear-gradient(to top, #92400e, var(--bar-compare)); box-shadow: 0 0 12px rgba(245,158,11,0.5); }
+  .bar.active { background: linear-gradient(to top, #047857, var(--bar-active)); box-shadow: 0 0 12px rgba(0,245,196,0.5); }
+  .bar.sorted { background: linear-gradient(to top, #065f46, #10b981); }
+  .bar.pivot { background: linear-gradient(to top, #7f1d1d, var(--bar-pivot)); box-shadow: 0 0 12px rgba(239,68,68,0.5); }
+
+  /* Graph viz */
+  #graph-viz {
+    width: 100%;
+    height: 360px;
+    position: relative;
+    display: none;
+  }
+
+  #graph-canvas {
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+  }
+
+  /* Step info */
+  .step-info {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--surface2);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .step-info .step-icon { color: var(--accent); font-size: 14px; }
+  .step-info .step-text { color: var(--text); }
+
+  /* Stats bar */
+  .stats-bar {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 24px;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .stat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  /* Legend */
+  .legend {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+  }
+
+  /* Array input */
+  .array-input-group {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .array-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .array-input:focus { border-color: var(--accent); }
+  .array-input::placeholder { color: var(--muted); }
+
+  /* Dijkstra source select */
+  .source-select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+
+  .source-select:focus { border-color: var(--accent); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Input / Output array display */
+  .array-output-panel {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    display: none;
+  }
+
+  .array-output-panel.visible { display: block; }
+
+  .array-io-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .array-io-row:last-child { margin-bottom: 0; }
+
+  .array-io-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    min-width: 52px;
+    padding-top: 4px;
+  }
+
+  .array-io-values {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .array-chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 5px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    transition: all 0.3s;
+  }
+
+  .array-chip.output-chip {
+    background: rgba(16,185,129,0.1);
+    border-color: rgba(16,185,129,0.4);
+    color: #10b981;
+    animation: chipPop 0.3s ease forwards;
+  }
+
+  @keyframes chipPop {
+    from { transform: scale(0.8); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+  }
+
+  /* Animations */
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .canvas-area { animation: slideIn 0.4s ease; }
+  .sidebar { animation: slideIn 0.3s ease; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">⬡</div>
+      <div class="logo-text">Algo<span>Viz</span></div>
+    </div>
+    <div class="header-tag">ALGORITHM VISUALIZER v1.0</div>
+  </header>
+
+  <div class="main-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="section-label">Algorithm Type</div>
+        <div class="algo-type-tabs">
+          <button class="type-tab active" id="tab-sort" onclick="switchType('sort')">SORTING</button>
+          <button class="type-tab" id="tab-graph" onclick="switchType('graph')">GRAPH</button>
+        </div>
+        <div class="algo-list" id="algo-list-sort">
+          <button class="algo-btn active" onclick="selectAlgo('selection')"><span class="algo-dot"></span>Selection Sort</button>
+          <button class="algo-btn" onclick="selectAlgo('merge')"><span class="algo-dot"></span>Merge Sort</button>
+          <button class="algo-btn" onclick="selectAlgo('quick')"><span class="algo-dot"></span>Quick Sort</button>
+        </div>
+        <div class="algo-list" id="algo-list-graph" style="display:none">
+          <button class="algo-btn" onclick="selectAlgo('bfs')"><span class="algo-dot"></span>BFS</button>
+          <button class="algo-btn" onclick="selectAlgo('dfs')"><span class="algo-dot"></span>DFS</button>
+          <button class="algo-btn" onclick="selectAlgo('dijkstra')"><span class="algo-dot"></span>Dijkstra</button>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="section-label">Complexity</div>
+        <div class="complexity-card">
+          <div class="complexity-row">
+            <span class="complexity-label">Best</span>
+            <span class="complexity-value" id="c-best">O(n²)</span>
+          </div>
+          <div class="complexity-row">
+            <span class="complexity-label">Average</span>
+            <span class="complexity-value" id="c-avg">O(n²)</span>
+          </div>
+          <div class="complexity-row">
+            <span class="complexity-label">Worst</span>
+            <span class="complexity-value" id="c-worst">O(n²)</span>
+          </div>
+          <div class="complexity-row">
+            <span class="complexity-label">Space</span>
+            <span class="complexity-value" id="c-space">O(1)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sort controls -->
+      <div id="sort-controls">
+        <div class="sidebar-section">
+          <div class="section-label">Array</div>
+          <div class="control-group">
+            <div class="control-label">Size <span id="size-val">30</span></div>
+            <input type="range" id="size-slider" min="5" max="80" value="30" oninput="updateSize(this.value)">
+          </div>
+          <div class="control-group">
+            <div class="control-label">Custom Input</div>
+            <div class="array-input-group">
+              <input type="text" class="array-input" id="custom-array" placeholder="e.g. 5,3,8,1,9">
+              <button class="btn btn-secondary" onclick="applyCustomArray()" style="padding:8px 12px;border-radius:8px;font-family:'JetBrains Mono';font-size:11px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text)">SET</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Graph controls -->
+      <div id="graph-controls" style="display:none">
+        <div class="sidebar-section">
+          <div class="section-label">Graph</div>
+          <div class="control-group">
+            <div class="control-label">Source Node</div>
+            <select class="source-select" id="source-select">
+              <option value="0">Node A</option>
+              <option value="1">Node B</option>
+              <option value="2">Node C</option>
+              <option value="3">Node D</option>
+              <option value="4">Node E</option>
+              <option value="5">Node F</option>
+              <option value="6">Node G</option>
+            </select>
+          </div>
+          <button class="btn-full" onclick="generateNewGraph()" style="margin-top:4px">↻ NEW GRAPH</button>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="section-label">Controls</div>
+        <div class="control-group">
+          <div class="control-label">Speed <span id="speed-val">5</span>×</div>
+          <input type="range" id="speed-slider" min="1" max="10" value="5" oninput="updateSpeed(this.value)">
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary" id="play-btn" onclick="startVisualization()">▶ RUN</button>
+          <button class="btn btn-secondary" onclick="resetVisualization()">↺ RESET</button>
+        </div>
+        <button class="btn-full" onclick="generateNewArray()" id="gen-btn">⚡ RANDOMIZE</button>
+      </div>
+    </aside>
+
+    <!-- Main canvas -->
+    <main class="canvas-area">
+      <div class="canvas-header">
+        <div class="algo-title" id="algo-title">Selection <span>Sort</span></div>
+        <div class="status-badge idle" id="status-badge">
+          <div class="pulse"></div>
+          <span id="status-text">READY</span>
+        </div>
+      </div>
+
+      <div class="viz-panel">
+        <!-- Sorting bars -->
+        <div id="sort-viz"></div>
+        <!-- Graph canvas -->
+        <canvas id="graph-canvas" style="display:none; width:100%; height:360px;"></canvas>
+      </div>
+
+      <div class="step-info">
+        <span class="step-icon">◈</span>
+        <span class="step-text" id="step-text">Select an algorithm and press RUN to begin visualization</span>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat">
+          <div class="stat-label">Comparisons</div>
+          <div class="stat-value" id="stat-comparisons">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Swaps</div>
+          <div class="stat-value" id="stat-swaps">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Step</div>
+          <div class="stat-value" id="stat-steps">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Time (ms)</div>
+          <div class="stat-value" id="stat-time">0</div>
+        </div>
+      </div>
+
+      <div class="legend" id="sort-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#2d5a8e"></div>Default</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--bar-active)"></div>Active</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--bar-compare)"></div>Comparing</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--bar-sorted)"></div>Sorted</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--bar-pivot)"></div>Pivot</div>
+      </div>
+
+      <!-- Input / Output array panel (shown for sorting algos) -->
+      <div class="array-output-panel" id="array-output-panel">
+        <div class="array-io-row">
+          <div class="array-io-label">INPUT</div>
+          <div class="array-io-values" id="input-array-display"></div>
+        </div>
+        <div class="array-io-row">
+          <div class="array-io-label">OUTPUT</div>
+          <div class="array-io-values" id="output-array-display">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">Run the algorithm to see the sorted result…</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="legend" id="graph-legend" style="display:none">
+        <div class="legend-item"><div class="legend-dot" style="background:#334155;border-radius:50%"></div>Unvisited</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--accent);border-radius:50%"></div>Visiting</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#7c3aed;border-radius:50%"></div>Visited</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f59e0b;border-radius:50%"></div>Source</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#10b981;border-radius:50%"></div>Path</div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+// =====================================================
+// STATE
+// =====================================================
+let currentAlgo = 'selection';
+let currentType = 'sort';
+let array = [];
+let animationQueue = [];
+let isRunning = false;
+let animTimeout = null;
+let comparisons = 0, swaps = 0, steps = 0;
+let startTime = 0;
+let timerInterval = null;
+let speedMs = 100;
+
+// Graph state
+let graphNodes = [];
+let graphEdges = [];
+let graphAnimQueue = [];
+let nodeStates = {};
+let sourceNode = 0;
+
+const complexities = {
+  selection: { best: 'O(n²)',     avg: 'O(n²)',       worst: 'O(n²)',     space: 'O(1)' },
+  merge:     { best: 'O(n log n)',avg: 'O(n log n)',   worst: 'O(n log n)',space: 'O(n)' },
+  quick:     { best: 'O(n log n)',avg: 'O(n log n)',   worst: 'O(n²)',     space: 'O(log n)' },
+  bfs:       { best: 'O(V+E)',    avg: 'O(V+E)',       worst: 'O(V+E)',    space: 'O(V)' },
+  dfs:       { best: 'O(V+E)',    avg: 'O(V+E)',       worst: 'O(V+E)',    space: 'O(V)' },
+  dijkstra:  { best: 'O(E log V)',avg: 'O(E log V)',   worst: 'O(E log V)',space: 'O(V)' },
+};
+
+const algoTitles = {
+  selection: 'Selection <span>Sort</span>',
+  merge: 'Merge <span>Sort</span>',
+  quick: 'Quick <span>Sort</span>',
+  bfs: 'Breadth-First <span>Search</span>',
+  dfs: 'Depth-First <span>Search</span>',
+  dijkstra: "Dijkstra's <span>Shortest Path</span>",
+};
+
+// =====================================================
+// INIT
+// =====================================================
+function init() {
+  generateNewArray();   // also calls showInputArray internally
+  generateNewGraph();
+}
+
+// =====================================================
+// UI SWITCHES
+// =====================================================
+function switchType(type) {
+  currentType = type;
+  document.getElementById('tab-sort').classList.toggle('active', type === 'sort');
+  document.getElementById('tab-graph').classList.toggle('active', type === 'graph');
+  document.getElementById('algo-list-sort').style.display = type === 'sort' ? 'flex' : 'none';
+  document.getElementById('algo-list-graph').style.display = type === 'graph' ? 'flex' : 'none';
+  document.getElementById('sort-controls').style.display = type === 'sort' ? 'block' : 'none';
+  document.getElementById('graph-controls').style.display = type === 'graph' ? 'block' : 'none';
+  document.getElementById('sort-viz').style.display = type === 'sort' ? 'flex' : 'none';
+  document.getElementById('graph-canvas').style.display = type === 'graph' ? 'block' : 'none';
+  document.getElementById('sort-legend').style.display = type === 'sort' ? 'flex' : 'none';
+  document.getElementById('graph-legend').style.display = type === 'graph' ? 'flex' : 'none';
+  document.getElementById('gen-btn').textContent = type === 'sort' ? '⚡ RANDOMIZE' : '↻ NEW GRAPH';
+  document.getElementById('gen-btn').onclick = type === 'sort' ? generateNewArray : generateNewGraph;
+
+  // Show/hide array IO panel
+  if (type === 'sort') {
+    document.getElementById('array-output-panel').classList.add('visible');
+    showInputArray(array);
+    clearOutputArray();
+  } else {
+    document.getElementById('array-output-panel').classList.remove('visible');
+  }
+
+  if (type === 'graph') {
+    const firstGraphBtn = document.querySelector('#algo-list-graph .algo-btn');
+    selectAlgo('bfs', firstGraphBtn);
+  } else {
+    const firstSortBtn = document.querySelector('#algo-list-sort .algo-btn');
+    selectAlgo('selection', firstSortBtn);
+  }
+
+  resetVisualization();
+}
+
+function selectAlgo(algo, btn) {
+  currentAlgo = algo;
+  const listId = currentType === 'sort' ? 'algo-list-sort' : 'algo-list-graph';
+  document.querySelectorAll(`#${listId} .algo-btn`).forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  else {
+    document.querySelectorAll(`#${listId} .algo-btn`).forEach(b => {
+      if (b.textContent.toLowerCase().includes(algo.substring(0,3))) b.classList.add('active');
+    });
+  }
+  updateComplexity(algo);
+  document.getElementById('algo-title').innerHTML = algoTitles[algo] || algo;
+  resetVisualization();
+}
+
+// Handle algo button clicks properly
+document.querySelectorAll('.algo-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const text = this.textContent.trim().toLowerCase();
+    let algo = 'selection';
+    if (text.includes('selection')) algo = 'selection';
+    else if (text.includes('merge')) algo = 'merge';
+    else if (text.includes('quick')) algo = 'quick';
+    else if (text.includes('bfs')) algo = 'bfs';
+    else if (text.includes('dfs')) algo = 'dfs';
+    else if (text.includes('dijkstra')) algo = 'dijkstra';
+    selectAlgo(algo, this);
+  });
+});
+
+function updateComplexity(algo) {
+  const c = complexities[algo] || complexities.selection;
+  document.getElementById('c-best').textContent = c.best;
+  document.getElementById('c-avg').textContent = c.avg;
+  document.getElementById('c-worst').textContent = c.worst;
+  document.getElementById('c-space').textContent = c.space;
+}
+
+function updateSize(val) {
+  document.getElementById('size-val').textContent = val;
+  if (!isRunning) generateNewArray();
+}
+
+function updateSpeed(val) {
+  document.getElementById('speed-val').textContent = val;
+  speedMs = Math.max(10, 600 / (val * val * 0.15 + val));
+}
+
+// =====================================================
+// ARRAY GENERATION & RENDERING
+// =====================================================
+function generateNewArray() {
+  resetVisualization();
+  const size = parseInt(document.getElementById('size-slider').value);
+  array = Array.from({length: size}, () => Math.floor(Math.random() * 95) + 5);
+  renderBars(array, []);
+  showInputArray(array);
+  clearOutputArray();
+}
+
+function applyCustomArray() {
+  const input = document.getElementById('custom-array').value;
+  const parsed = input.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n > 0);
+  if (parsed.length < 2) { setStep('Invalid input. Enter comma-separated positive numbers.'); return; }
+  resetVisualization();
+  array = parsed.slice(0, 80);
+  document.getElementById('size-slider').value = array.length;
+  document.getElementById('size-val').textContent = array.length;
+  renderBars(array, []);
+  showInputArray(array);
+  clearOutputArray();
+}
+
+function renderBars(arr, highlights) {
+  // highlights: [{idx, cls}]
+  const viz = document.getElementById('sort-viz');
+  viz.innerHTML = '';
+  const maxVal = Math.max(...arr);
+  const hMap = {};
+  if (highlights) highlights.forEach(h => hMap[h.idx] = h.cls);
+
+  arr.forEach((val, i) => {
+    const bar = document.createElement('div');
+    bar.className = 'bar ' + (hMap[i] || 'default');
+    bar.style.height = `${(val / maxVal) * 280}px`;
+    bar.title = val;
+    viz.appendChild(bar);
+  });
+}
+
+function showInputArray(arr) {
+  const panel = document.getElementById('array-output-panel');
+  panel.classList.add('visible');
+  const container = document.getElementById('input-array-display');
+  container.innerHTML = '';
+  // Show max 60 values to avoid overflow
+  const display = arr.slice(0, 60);
+  display.forEach(val => {
+    const chip = document.createElement('span');
+    chip.className = 'array-chip';
+    chip.textContent = val;
+    container.appendChild(chip);
+  });
+  if (arr.length > 60) {
+    const more = document.createElement('span');
+    more.className = 'array-chip';
+    more.style.color = 'var(--muted)';
+    more.textContent = `+${arr.length - 60} more`;
+    container.appendChild(more);
+  }
+}
+
+function showOutputArray(arr) {
+  const container = document.getElementById('output-array-display');
+  container.innerHTML = '';
+  const display = arr.slice(0, 60);
+  display.forEach((val, i) => {
+    const chip = document.createElement('span');
+    chip.className = 'array-chip output-chip';
+    chip.style.animationDelay = `${Math.min(i * 8, 300)}ms`;
+    chip.textContent = val;
+    container.appendChild(chip);
+  });
+  if (arr.length > 60) {
+    const more = document.createElement('span');
+    more.className = 'array-chip output-chip';
+    more.textContent = `+${arr.length - 60} more`;
+    container.appendChild(more);
+  }
+}
+
+function clearOutputArray() {
+  const container = document.getElementById('output-array-display');
+  container.innerHTML = '<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--muted)">Run the algorithm to see the sorted result…</span>';
+}
+
+// =====================================================
+// STATS
+// =====================================================
+function resetStats() {
+  comparisons = 0; swaps = 0; steps = 0;
+  updateStats();
+  clearInterval(timerInterval);
+  document.getElementById('stat-time').textContent = '0';
+}
+
+function updateStats() {
+  document.getElementById('stat-comparisons').textContent = comparisons;
+  document.getElementById('stat-swaps').textContent = swaps;
+  document.getElementById('stat-steps').textContent = steps;
+}
+
+function startTimer() {
+  startTime = Date.now();
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    document.getElementById('stat-time').textContent = Date.now() - startTime;
+  }, 50);
+}
+
+function stopTimer() { clearInterval(timerInterval); }
+
+function setStatus(s) {
+  const badge = document.getElementById('status-badge');
+  const text = document.getElementById('status-text');
+  badge.className = 'status-badge ' + s;
+  text.textContent = s.toUpperCase();
+}
+
+function setStep(msg) {
+  document.getElementById('step-text').textContent = msg;
+}
+
+// =====================================================
+// MAIN CONTROL
+// =====================================================
+function startVisualization() {
+  if (isRunning) return;
+  isRunning = true;
+  setStatus('running');
+  resetStats();
+  startTimer();
+  document.getElementById('play-btn').disabled = true;
+
+  if (currentType === 'sort') {
+    const arr = [...array];
+    animationQueue = [];
+    if (currentAlgo === 'selection') selectionSort(arr);
+    else if (currentAlgo === 'merge') mergeSort(arr, 0, arr.length - 1);
+    else if (currentAlgo === 'quick') quickSort(arr, 0, arr.length - 1);
+    playSort();
+  } else {
+    graphAnimQueue = [];
+    nodeStates = {};
+    graphNodes.forEach((_, i) => nodeStates[i] = 'unvisited');
+    sourceNode = parseInt(document.getElementById('source-select').value);
+    if (currentAlgo === 'bfs') bfs(sourceNode);
+    else if (currentAlgo === 'dfs') dfsAlgo(sourceNode);
+    else if (currentAlgo === 'dijkstra') dijkstraAlgo(sourceNode);
+    playGraph();
+  }
+}
+
+function resetVisualization() {
+  isRunning = false;
+  clearTimeout(animTimeout);
+  stopTimer();
+  setStatus('idle');
+  resetStats();
+  setStep('Select an algorithm and press RUN to begin visualization');
+  document.getElementById('play-btn').disabled = false;
+
+  if (currentType === 'sort') {
+    renderBars(array, []);
+    clearOutputArray();
+  } else {
+    document.getElementById('array-output-panel').classList.remove('visible');
+    nodeStates = {};
+    graphNodes.forEach((_, i) => nodeStates[i] = 'unvisited');
+    drawGraph();
+  }
+}
+
+// =====================================================
+// SORTING ALGORITHMS
+// =====================================================
+function selectionSort(arr) {
+  const n = arr.length;
+  for (let i = 0; i < n - 1; i++) {
+    let minIdx = i;
+    for (let j = i + 1; j < n; j++) {
+      comparisons++;
+      animationQueue.push({
+        type: 'compare', arr: [...arr],
+        highlights: [{idx: minIdx, cls: 'active'}, {idx: j, cls: 'comparing'}],
+        msg: `Comparing index ${j} (${arr[j]}) with current min at ${minIdx} (${arr[minIdx]})`
+      });
+      if (arr[j] < arr[minIdx]) minIdx = j;
+    }
+    if (minIdx !== i) {
+      swaps++;
+      [arr[i], arr[minIdx]] = [arr[minIdx], arr[i]];
+      animationQueue.push({
+        type: 'swap', arr: [...arr],
+        highlights: [{idx: i, cls: 'active'}, {idx: minIdx, cls: 'comparing'}],
+        msg: `Swapping ${arr[minIdx]} → position ${i}`
+      });
+    }
+    animationQueue.push({
+      type: 'sorted', arr: [...arr],
+      sortedUpTo: i,
+      msg: `Position ${i} is now sorted with value ${arr[i]}`
+    });
+  }
+  animationQueue.push({
+    type: 'done', arr: [...arr],
+    msg: `✓ Array sorted! ${comparisons} comparisons, ${swaps} swaps`
+  });
+}
+
+function mergeSort(arr, l, r) {
+  if (l >= r) return;
+  const mid = Math.floor((l + r) / 2);
+  mergeSort(arr, l, mid);
+  mergeSort(arr, mid + 1, r);
+  merge(arr, l, mid, r);
+}
+
+function merge(arr, l, mid, r) {
+  const left = arr.slice(l, mid + 1);
+  const right = arr.slice(mid + 1, r + 1);
+  let i = 0, j = 0, k = l;
+
+  while (i < left.length && j < right.length) {
+    comparisons++;
+    animationQueue.push({
+      type: 'compare', arr: [...arr],
+      highlights: [{idx: l + i, cls: 'comparing'}, {idx: mid + 1 + j, cls: 'active'}],
+      msg: `Merging: comparing ${left[i]} and ${right[j]}`
+    });
+    if (left[i] <= right[j]) { arr[k++] = left[i++]; }
+    else { arr[k++] = right[j++]; swaps++; }
+    animationQueue.push({
+      type: 'place', arr: [...arr],
+      highlights: [{idx: k - 1, cls: 'active'}],
+      msg: `Placed ${arr[k-1]} at position ${k-1}`
+    });
+  }
+  while (i < left.length) { arr[k++] = left[i++]; }
+  while (j < right.length) { arr[k++] = right[j++]; }
+
+  animationQueue.push({
+    type: 'merge_done', arr: [...arr],
+    highlights: Array.from({length: r - l + 1}, (_, idx) => ({idx: l + idx, cls: 'sorted'})),
+    msg: `Merged segment [${l}..${r}]`
+  });
+}
+
+function quickSort(arr, low, high) {
+  if (low >= high) return;
+  const pivot = arr[high];
+  animationQueue.push({
+    type: 'pivot', arr: [...arr],
+    highlights: [{idx: high, cls: 'pivot'}],
+    msg: `Pivot selected: ${pivot} at index ${high}`
+  });
+  let i = low - 1;
+  for (let j = low; j < high; j++) {
+    comparisons++;
+    animationQueue.push({
+      type: 'compare', arr: [...arr],
+      highlights: [{idx: high, cls: 'pivot'}, {idx: j, cls: 'comparing'}],
+      msg: `Comparing ${arr[j]} with pivot ${pivot}`
+    });
+    if (arr[j] < pivot) {
+      i++;
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+      swaps++;
+      animationQueue.push({
+        type: 'swap', arr: [...arr],
+        highlights: [{idx: high, cls: 'pivot'}, {idx: i, cls: 'active'}, {idx: j, cls: 'comparing'}],
+        msg: `Swapped ${arr[j]} and ${arr[i]}`
+      });
+    }
+  }
+  [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
+  const pi = i + 1;
+  animationQueue.push({
+    type: 'place', arr: [...arr],
+    highlights: [{idx: pi, cls: 'sorted'}],
+    msg: `Pivot ${arr[pi]} placed at final position ${pi}`
+  });
+  quickSort(arr, low, pi - 1);
+  quickSort(arr, pi + 1, high);
+}
+
+// =====================================================
+// SORT PLAYBACK
+// =====================================================
+function playSort() {
+  if (animationQueue.length === 0) {
+    setStatus('done');
+    stopTimer();
+    setStep('✓ Sorting complete!');
+    const sortedArr = [...array].sort((a, b) => a - b); // final sorted state
+    renderBars(sortedArr, sortedArr.map((_, i) => ({idx: i, cls: 'sorted'})));
+    showOutputArray(sortedArr);
+    isRunning = false;
+    document.getElementById('play-btn').disabled = false;
+    return;
+  }
+
+  const frame = animationQueue.shift();
+  steps++;
+  updateStats();
+  setStep(frame.msg || '');
+
+  if (frame.type === 'done') {
+    const finalArr = frame.arr;
+    renderBars(finalArr, finalArr.map((_, i) => ({idx: i, cls: 'sorted'})));
+    showOutputArray(finalArr);
+    setStatus('done');
+    stopTimer();
+    isRunning = false;
+    document.getElementById('play-btn').disabled = false;
+    return;
+  }
+
+  const highlights = frame.highlights || [];
+  if (frame.type === 'sorted') {
+    const sortedHighlights = Array.from({length: frame.sortedUpTo + 1}, (_, i) => ({idx: i, cls: 'sorted'}));
+    renderBars(frame.arr, sortedHighlights);
+  } else if (frame.type === 'merge_done') {
+    renderBars(frame.arr, frame.highlights);
+  } else {
+    renderBars(frame.arr, highlights);
+  }
+
+  animTimeout = setTimeout(playSort, speedMs);
+}
+
+// =====================================================
+// GRAPH SETUP
+// =====================================================
+const NODE_LABELS = ['A','B','C','D','E','F','G'];
+
+function generateNewGraph() {
+  resetVisualization();
+  const canvas = document.getElementById('graph-canvas');
+  const W = canvas.offsetWidth || 700;
+  const H = canvas.offsetHeight || 360;
+  const cx = W / 2, cy = H / 2;
+  const r = Math.min(W, H) * 0.35;
+
+  graphNodes = NODE_LABELS.map((label, i) => {
+    const angle = (i / 7) * Math.PI * 2 - Math.PI / 2;
+    return {
+      id: i,
+      label,
+      x: cx + r * Math.cos(angle),
+      y: cy + r * Math.sin(angle),
+    };
+  });
+
+  // Generate connected graph
+  graphEdges = [];
+  const adj = Array.from({length: 7}, () => []);
+
+  // Ensure connectivity first (spanning tree)
+  const shuffled = [...Array(7).keys()].sort(() => Math.random() - 0.5);
+  for (let i = 1; i < shuffled.length; i++) {
+    const u = shuffled[i - 1], v = shuffled[i];
+    const w = Math.floor(Math.random() * 9) + 1;
+    graphEdges.push({u, v, w});
+    adj[u].push(v); adj[v].push(u);
+  }
+
+  // Add random extra edges
+  const extraEdges = Math.floor(Math.random() * 4) + 3;
+  for (let e = 0; e < extraEdges; e++) {
+    const u = Math.floor(Math.random() * 7);
+    const v = Math.floor(Math.random() * 7);
+    if (u !== v && !adj[u].includes(v)) {
+      const w = Math.floor(Math.random() * 9) + 1;
+      graphEdges.push({u, v, w});
+      adj[u].push(v); adj[v].push(u);
+    }
+  }
+
+  nodeStates = {};
+  graphNodes.forEach((_, i) => nodeStates[i] = 'unvisited');
+  drawGraph();
+}
+
+function buildAdj(weighted = false) {
+  const adj = Array.from({length: graphNodes.length}, () => []);
+  graphEdges.forEach(e => {
+    if (weighted) {
+      adj[e.u].push({node: e.v, weight: e.w});
+      adj[e.v].push({node: e.u, weight: e.w});
+    } else {
+      adj[e.u].push(e.v);
+      adj[e.v].push(e.u);
+    }
+  });
+  return adj;
+}
+
+// =====================================================
+// GRAPH ALGORITHMS  (fully fixed — cumulative state tracking)
+// =====================================================
+function bfs(start) {
+  const adj = buildAdj();
+  const visited = new Array(graphNodes.length).fill(false);
+  const queue = [start];
+  visited[start] = true;
+
+  // We track ALL node states in one object and clone it each frame
+  const ns = {};
+  graphNodes.forEach((_, i) => { ns[i] = 'unvisited'; });
+  ns[start] = 'source';
+
+  const edgeStates = {};
+
+  graphAnimQueue.push({
+    nodeOverride: {...ns},
+    edges: {},
+    msg: `BFS starting from node ${NODE_LABELS[start]}. Queue: [${NODE_LABELS[start]}]`
+  });
+
+  while (queue.length > 0) {
+    const u = queue.shift();
+    comparisons++;
+
+    ns[u] = u === start ? 'source' : 'visiting';
+    graphAnimQueue.push({
+      nodeOverride: {...ns},
+      edges: {...edgeStates},
+      msg: `Visiting node ${NODE_LABELS[u]}. Queue: [${queue.map(n => NODE_LABELS[n]).join(', ')}]`
+    });
+
+    for (const v of adj[u]) {
+      comparisons++;
+      if (!visited[v]) {
+        visited[v] = true;
+        queue.push(v);
+        edgeStates[`${Math.min(u,v)}-${Math.max(u,v)}`] = 'active';
+        ns[v] = 'visiting';
+        graphAnimQueue.push({
+          nodeOverride: {...ns},
+          edges: {...edgeStates},
+          msg: `Discovered node ${NODE_LABELS[v]} from ${NODE_LABELS[u]}. Queue: [${queue.map(n => NODE_LABELS[n]).join(', ')}]`
+        });
+      }
+    }
+
+    ns[u] = u === start ? 'source' : 'visited';
+    graphAnimQueue.push({
+      nodeOverride: {...ns},
+      edges: {...edgeStates},
+      msg: `Finished node ${NODE_LABELS[u]}, marked as visited.`
+    });
+  }
+
+  graphAnimQueue.push({
+    nodeOverride: {...ns},
+    edges: {...edgeStates},
+    msg: `✓ BFS complete! All ${graphNodes.filter((_, i) => ns[i] !== 'unvisited').length} reachable nodes visited.`
+  });
+}
+
+function dfsAlgo(start) {
+  const adj = buildAdj();
+  const visited = new Array(graphNodes.length).fill(false);
+  const edgeStates = {};
+
+  // Cumulative node state object
+  const ns = {};
+  graphNodes.forEach((_, i) => { ns[i] = 'unvisited'; });
+  ns[start] = 'source';
+
+  graphAnimQueue.push({
+    nodeOverride: {...ns},
+    edges: {},
+    msg: `DFS starting from node ${NODE_LABELS[start]}`
+  });
+
+  function dfsHelper(u) {
+    visited[u] = true;
+    comparisons++;
+    ns[u] = u === start ? 'source' : 'visiting';
+
+    graphAnimQueue.push({
+      nodeOverride: {...ns},
+      edges: {...edgeStates},
+      msg: `DFS visiting node ${NODE_LABELS[u]}`
+    });
+
+    for (const v of adj[u]) {
+      if (!visited[v]) {
+        edgeStates[`${Math.min(u,v)}-${Math.max(u,v)}`] = 'active';
+        graphAnimQueue.push({
+          nodeOverride: {...ns},
+          edges: {...edgeStates},
+          msg: `Exploring edge ${NODE_LABELS[u]} → ${NODE_LABELS[v]}`
+        });
+        dfsHelper(v);
+      }
+    }
+
+    ns[u] = u === start ? 'source' : 'visited';
+    graphAnimQueue.push({
+      nodeOverride: {...ns},
+      edges: {...edgeStates},
+      msg: `Backtracking from ${NODE_LABELS[u]}`
+    });
+  }
+
+  dfsHelper(start);
+  graphAnimQueue.push({
+    nodeOverride: {...ns},
+    edges: {...edgeStates},
+    msg: `✓ DFS complete! All reachable nodes explored.`
+  });
+}
+
+function dijkstraAlgo(start) {
+  const adj = buildAdj(true);
+  const n = graphNodes.length;
+  const dist = new Array(n).fill(Infinity);
+  const prev = new Array(n).fill(-1);
+  const visited = new Array(n).fill(false);
+  dist[start] = 0;
+
+  const edgeStates = {};
+  const ns = {};
+  graphNodes.forEach((_, i) => { ns[i] = 'unvisited'; });
+  ns[start] = 'source';
+
+  graphAnimQueue.push({
+    nodeOverride: {...ns},
+    edges: {},
+    msg: `Dijkstra from ${NODE_LABELS[start]}. dist[${NODE_LABELS[start]}]=0, all others=∞`
+  });
+
+  for (let iter = 0; iter < n; iter++) {
+    // Find unvisited node with smallest distance
+    let u = -1;
+    for (let i = 0; i < n; i++) {
+      if (!visited[i] && dist[i] < Infinity) {
+        if (u === -1 || dist[i] < dist[u]) u = i;
+      }
+    }
+    if (u === -1) break;
+
+    visited[u] = true;
+    comparisons++;
+    ns[u] = u === start ? 'source' : 'visiting';
+
+    graphAnimQueue.push({
+      nodeOverride: {...ns},
+      edges: {...edgeStates},
+      msg: `Processing ${NODE_LABELS[u]} (shortest dist = ${dist[u]})`
+    });
+
+    for (const {node: v, weight: w} of adj[u]) {
+      comparisons++;
+      if (!visited[v] && dist[u] + w < dist[v]) {
+        dist[v] = dist[u] + w;
+        prev[v] = u;
+        edgeStates[`${Math.min(u,v)}-${Math.max(u,v)}`] = 'active';
+        ns[v] = 'visiting';
+        graphAnimQueue.push({
+          nodeOverride: {...ns},
+          edges: {...edgeStates},
+          msg: `Relaxed edge to ${NODE_LABELS[v]}: new dist = ${dist[v]} (via ${NODE_LABELS[u]} + ${w})`
+        });
+      }
+    }
+
+    ns[u] = u === start ? 'source' : 'visited';
+  }
+
+  // Highlight final shortest path tree
+  for (let v = 0; v < n; v++) {
+    if (prev[v] !== -1) {
+      const u = prev[v];
+      edgeStates[`${Math.min(u,v)}-${Math.max(u,v)}`] = 'path';
+      if (ns[v] !== 'source') ns[v] = 'path';
+    }
+  }
+
+  const distStr = graphNodes.map((_, i) => `${NODE_LABELS[i]}:${dist[i] === Infinity ? '∞' : dist[i]}`).join(' ');
+  graphAnimQueue.push({
+    nodeOverride: {...ns},
+    edges: {...edgeStates},
+    msg: `✓ Dijkstra complete! Distances — ${distStr}`
+  });
+}
+
+// =====================================================
+// GRAPH DRAWING
+// =====================================================
+function drawGraph(nodeOverride, edgeStates) {
+  const canvas = document.getElementById('graph-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 700;
+  const H = canvas.offsetHeight || 360;
+  canvas.width = W;
+  canvas.height = H;
+
+  ctx.clearRect(0, 0, W, H);
+
+  const nodeColors = {
+    unvisited: '#1e2940',
+    visiting:  '#00f5c4',
+    visited:   '#7c3aed',
+    source:    '#f59e0b',
+    path:      '#10b981',
+  };
+
+  const edgeColors = {
+    default: '#2a2a3a',
+    active:  '#00f5c4',
+    path:    '#10b981',
+  };
+
+  // Draw edges
+  graphEdges.forEach(({ u, v, w }) => {
+    const key = `${Math.min(u,v)}-${Math.max(u,v)}`;
+    const state = (edgeStates && edgeStates[key]) || 'default';
+    const n1 = graphNodes[u], n2 = graphNodes[v];
+    const color = edgeColors[state] || edgeColors.default;
+
+    ctx.beginPath();
+    ctx.moveTo(n1.x, n1.y);
+    ctx.lineTo(n2.x, n2.y);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = state === 'path' ? 3 : state === 'active' ? 2.5 : 1.5;
+    ctx.shadowColor = state !== 'default' ? color : 'transparent';
+    ctx.shadowBlur = state !== 'default' ? 8 : 0;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Weight label background
+    const mx = (n1.x + n2.x) / 2, my = (n1.y + n2.y) / 2;
+    ctx.beginPath();
+    ctx.arc(mx, my, 10, 0, Math.PI * 2);
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fill();
+    ctx.strokeStyle = state !== 'default' ? color : '#2a2a3a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = state === 'default' ? '#64748b' : color;
+    ctx.font = 'bold 11px JetBrains Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(w, mx, my);
+  });
+
+  // Draw nodes
+  graphNodes.forEach((node, i) => {
+    const state = (nodeOverride && nodeOverride[i] !== undefined)
+      ? nodeOverride[i]
+      : (nodeStates[i] || 'unvisited');
+    const color = nodeColors[state] || nodeColors.unvisited;
+
+    // Glow
+    if (state !== 'unvisited') {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, 26, 0, Math.PI * 2);
+      ctx.fillStyle = color + '33';
+      ctx.fill();
+    }
+
+    // Fill
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, 22, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.shadowColor = state !== 'unvisited' ? color : 'transparent';
+    ctx.shadowBlur = state !== 'unvisited' ? 14 : 0;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Border
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, 22, 0, Math.PI * 2);
+    ctx.strokeStyle = state === 'unvisited' ? '#334155' : color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Label
+    ctx.fillStyle = (state === 'visiting' || state === 'source') ? '#0a0a0f' : '#e2e8f0';
+    ctx.font = 'bold 14px Syne, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(node.label, node.x, node.y);
+  });
+}
+
+// =====================================================
+// GRAPH PLAYBACK
+// =====================================================
+function playGraph() {
+  if (graphAnimQueue.length === 0) {
+    setStatus('done');
+    stopTimer();
+    setStep('✓ Algorithm complete!');
+    isRunning = false;
+    document.getElementById('play-btn').disabled = false;
+    return;
+  }
+
+  const frame = graphAnimQueue.shift();
+  steps++;
+  updateStats();
+  setStep(frame.msg || '');
+  drawGraph(frame.nodeOverride, frame.edges);
+
+  animTimeout = setTimeout(playGraph, speedMs * 2);
+}
+
+// =====================================================
+// BOOTSTRAP — wire up all buttons
+// =====================================================
+document.querySelectorAll('#algo-list-sort .algo-btn').forEach((btn, i) => {
+  const algos = ['selection', 'merge', 'quick'];
+  btn.onclick = function() {
+    document.querySelectorAll('#algo-list-sort .algo-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    currentAlgo = algos[i];
+    updateComplexity(algos[i]);
+    document.getElementById('algo-title').innerHTML = algoTitles[algos[i]];
+    resetVisualization();
+  };
+});
+
+document.querySelectorAll('#algo-list-graph .algo-btn').forEach((btn, i) => {
+  const algos = ['bfs', 'dfs', 'dijkstra'];
+  btn.onclick = function() {
+    document.querySelectorAll('#algo-list-graph .algo-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    currentAlgo = algos[i];
+    updateComplexity(algos[i]);
+    document.getElementById('algo-title').innerHTML = algoTitles[algos[i]];
+    resetVisualization();
+  };
+});
+
+updateSpeed(5);
+init();
+</script>
+</body>
+</html>
+<!-- build-tag: v0.1-layout -->
